@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
-from fastapi import FastAPI, File, UploadFile, HTTPException, Depends
+from fastapi import FastAPI, File, Form, UploadFile, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -140,7 +140,11 @@ def sse(data: dict) -> str:
 # --- Transcription ---
 
 @app.post("/transcribe")
-async def transcribe(file: UploadFile = File(...), _=Depends(verify_token)):
+async def transcribe(
+    file: UploadFile = File(...),
+    language: str | None = Form(None),
+    _=Depends(verify_token),
+):
     # Validate extension
     ext = os.path.splitext(file.filename or "")[1].lower().lstrip(".") or "mp3"
     if ext not in ALLOWED_EXTENSIONS:
@@ -177,7 +181,7 @@ async def transcribe(file: UploadFile = File(...), _=Depends(verify_token)):
 
             chunk_bytes_limit = CHUNK_MB * 1024 * 1024
             if len(mp3_bytes) <= chunk_bytes_limit:
-                text = _transcribe_bytes(mp3_bytes, "audio.mp3", "audio/mpeg")
+                text = _transcribe_bytes(mp3_bytes, "audio.mp3", "audio/mpeg", language=language)
                 yield sse({"done": True, "text": text})
                 return
 
@@ -200,7 +204,7 @@ async def transcribe(file: UploadFile = File(...), _=Depends(verify_token)):
                 try:
                     with open(chunk_path, "rb") as f:
                         chunk_data = f.read()
-                    text = _transcribe_bytes(chunk_data, f"chunk_{i}.mp3", "audio/mpeg")
+                    text = _transcribe_bytes(chunk_data, f"chunk_{i}.mp3", "audio/mpeg", language=language)
                     transcriptions.append(text)
                 except HTTPException:
                     yield sse({"error": "Error al transcribir fragmento de audio"})
@@ -223,12 +227,12 @@ async def transcribe(file: UploadFile = File(...), _=Depends(verify_token)):
     return StreamingResponse(generate(), media_type="text/event-stream")
 
 
-def _transcribe_bytes(data: bytes, filename: str, content_type: str) -> str:
+def _transcribe_bytes(data: bytes, filename: str, content_type: str, language: str | None = None) -> str:
     try:
-        result = client.audio.transcriptions.create(
-            model="whisper-1",
-            file=(filename, data, content_type),
-        )
+        params = dict(model="whisper-1", file=(filename, data, content_type))
+        if language:
+            params["language"] = language
+        result = client.audio.transcriptions.create(**params)
         return result.text
     except (APIError, APITimeoutError) as e:
         logger.error("OpenAI transcription error: %s", e)

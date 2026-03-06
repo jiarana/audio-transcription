@@ -108,6 +108,8 @@ async function transcribe() {
   const audioDuration = await getAudioDuration(file);
   const formData = new FormData();
   formData.append("file", file);
+  const language = document.getElementById("langSelect").value;
+  if (language) formData.append("language", language);
 
   setTranscribing(true);
   resultBox.classList.add("hidden");
@@ -200,6 +202,7 @@ function saveText() {
 function resetApp() {
   document.getElementById("audioFile").value = "";
   document.getElementById("fileName").textContent = "Ningún archivo seleccionado";
+  document.getElementById("langSelect").value = "";
   document.getElementById("resultBox").classList.add("hidden");
   document.getElementById("status").classList.add("hidden");
   document.getElementById("resultText").textContent = "";

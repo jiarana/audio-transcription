@@ -35,8 +35,24 @@
     <div class="upload-box">
       <label for="audioFile" class="sr-only">Seleccionar archivo de audio o video</label>
       <input type="file" id="audioFile" accept="audio/*,video/*" style="display:none" onchange="updateFileName()" />
-      <button id="selectFileBtn" class="btn-secondary" onclick="document.getElementById('audioFile').click()">Seleccionar archivo</button>
-      <span id="fileName" class="file-name">Ningún archivo seleccionado</span>
+      <div class="file-row">
+        <button id="selectFileBtn" class="btn-secondary" onclick="document.getElementById('audioFile').click()">Seleccionar archivo</button>
+        <span id="fileName" class="file-name">Ningún archivo seleccionado</span>
+      </div>
+      <label for="langSelect" class="sr-only">Idioma del audio</label>
+      <select id="langSelect">
+        <option value="">Idioma: Auto-detectar</option>
+        <option value="es">Español</option>
+        <option value="en">English</option>
+        <option value="fr">Français</option>
+        <option value="de">Deutsch</option>
+        <option value="pt">Português</option>
+        <option value="it">Italiano</option>
+        <option value="zh">中文</option>
+        <option value="ja">日本語</option>
+        <option value="ru">Русский</option>
+        <option value="ar">العربية</option>
+      </select>
       <button id="transcribeBtn" onclick="transcribe()">Transcribir</button>
     </div>
 

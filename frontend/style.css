@@ -77,9 +77,29 @@ h1 {
 
 .upload-box {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.upload-box select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: #fff;
+  cursor: pointer;
+}
+
+.upload-box select:focus {
+  outline: none;
+  border-color: #4a90e2;
+}
+
+.file-row {
+  display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .file-name {
@@ -92,21 +112,8 @@ h1 {
   min-width: 0;
 }
 
-@media (max-width: 480px) {
-  .upload-box {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .file-name {
-    text-align: center;
-    white-space: normal;
-    word-break: break-all;
-  }
-
-  #transcribeBtn {
-    width: 100%;
-  }
+#transcribeBtn {
+  width: 100%;
 }
 
 button {
