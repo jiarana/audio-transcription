@@ -229,7 +229,7 @@ async def transcribe(
 
 def _transcribe_bytes(data: bytes, filename: str, content_type: str, language: str | None = None) -> str:
     try:
-        params = dict(model="whisper-1", file=(filename, data, content_type))
+        params = dict(model="gpt-4o-transcribe", file=(filename, data, content_type))
         if language:
             params["language"] = language
         result = client.audio.transcriptions.create(**params)
