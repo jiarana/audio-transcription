@@ -56,6 +56,8 @@ h1 {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .app-header h1 {
@@ -118,6 +120,7 @@ h1 {
 
 button {
   padding: 10px 24px;
+  min-height: 48px;
   background: #4a90e2;
   color: #fff;
   border: none;
@@ -171,6 +174,13 @@ button:disabled {
   border-radius: 6px;
   font-size: 0.9rem;
   color: #1a5fa8;
+  overflow: hidden;
+}
+
+.info-box span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .result-box h2 {
@@ -216,6 +226,20 @@ button:disabled {
 
 .btn-secondary:hover {
   background: #eaf4ff;
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 20px;
+  }
+
+  .result-actions {
+    flex-direction: column;
+  }
+
+  .result-actions button {
+    width: 100%;
+  }
 }
 
 .hidden {

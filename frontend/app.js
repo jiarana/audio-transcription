@@ -172,6 +172,7 @@ async function transcribe() {
           status.classList.add("hidden");
           resultText.value = data.text;
           resultBox.classList.remove("hidden");
+          resultBox.scrollIntoView({ behavior: "smooth", block: "start" });
         }
       }
     }
