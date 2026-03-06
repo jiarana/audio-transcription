@@ -84,15 +84,33 @@ h1 {
 
 input[type="file"] {
   flex: 1;
+  min-width: 0;
   padding: 10px;
   border: 2px dashed #ccc;
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 input[type="file"]:hover {
   border-color: #4a90e2;
+}
+
+@media (max-width: 480px) {
+  .upload-box {
+    flex-direction: column;
+  }
+
+  input[type="file"] {
+    width: 100%;
+  }
+
+  #transcribeBtn {
+    width: 100%;
+  }
 }
 
 button {
