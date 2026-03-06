@@ -35,9 +35,10 @@
     <div class="upload-box">
       <label for="audioFile" class="sr-only">Seleccionar archivo de audio o video</label>
       <input type="file" id="audioFile" accept="audio/*,video/*" style="display:none" onchange="updateFileName()" />
-      <div class="file-row">
-        <button id="selectFileBtn" class="btn-secondary" onclick="document.getElementById('audioFile').click()">Seleccionar archivo</button>
-        <span id="fileName" class="file-name">Ningún archivo seleccionado</span>
+      <button id="selectFileBtn" class="btn-secondary" onclick="document.getElementById('audioFile').click()">Seleccionar archivo</button>
+      <div id="fileChip" class="file-chip hidden">
+        <span id="fileName" class="file-chip-name"></span>
+        <button class="file-chip-clear" onclick="clearFile()" aria-label="Quitar archivo">✕</button>
       </div>
       <label for="langSelect" class="sr-only">Idioma del audio</label>
       <select id="langSelect">

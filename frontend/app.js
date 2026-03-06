@@ -74,8 +74,18 @@ function showLoginStatus(message, type) {
 
 function updateFileName() {
   const fileInput = document.getElementById("audioFile");
-  const label = document.getElementById("fileName");
-  label.textContent = fileInput.files.length ? fileInput.files[0].name : "Ningún archivo seleccionado";
+  const chip = document.getElementById("fileChip");
+  if (fileInput.files.length) {
+    document.getElementById("fileName").textContent = fileInput.files[0].name;
+    chip.classList.remove("hidden");
+  } else {
+    chip.classList.add("hidden");
+  }
+}
+
+function clearFile() {
+  document.getElementById("audioFile").value = "";
+  document.getElementById("fileChip").classList.add("hidden");
 }
 
 // --- Transcripción ---
@@ -213,7 +223,7 @@ function saveText() {
 
 function resetApp() {
   document.getElementById("audioFile").value = "";
-  document.getElementById("fileName").textContent = "Ningún archivo seleccionado";
+  document.getElementById("fileChip").classList.add("hidden");
   document.getElementById("langSelect").value = "";
   document.getElementById("resultBox").classList.add("hidden");
   document.getElementById("status").classList.add("hidden");

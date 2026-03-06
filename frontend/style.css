@@ -98,20 +98,44 @@ h1 {
   border-color: #4a90e2;
 }
 
-.file-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+#selectFileBtn {
+  width: 100%;
 }
 
-.file-name {
+.file-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #eaf4ff;
+  border: 1px solid #b3d4f5;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.file-chip-name {
   flex: 1;
   font-size: 0.9rem;
-  color: #666;
+  color: #1a5fa8;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+}
+
+.file-chip-clear {
+  min-height: unset;
+  padding: 4px 8px;
+  background: transparent;
+  color: #888;
+  border: none;
+  font-size: 1rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.file-chip-clear:hover {
+  background: transparent;
+  color: #c0392b;
 }
 
 #transcribeBtn {
