@@ -1,6 +1,8 @@
-const BACKEND_URL = window.location.hostname === "localhost" || window.location.protocol === "file:"
+const BACKEND_URL = window.location.protocol === "file:"
   ? "http://localhost:8000"
-  : "";
+  : window.location.origin;
+
+const MAX_FILE_SIZE_MB = 100;
 
 // --- Sesión ---
 
@@ -78,9 +80,13 @@ function updateFileName() {
 
 // --- Transcripción ---
 
+function setTranscribing(active) {
+  document.getElementById("transcribeBtn").disabled = active;
+  document.getElementById("selectFileBtn").disabled = active;
+}
+
 async function transcribe() {
   const fileInput = document.getElementById("audioFile");
-  const btn = document.getElementById("transcribeBtn");
   const status = document.getElementById("status");
   const resultBox = document.getElementById("resultBox");
   const resultText = document.getElementById("resultText");
@@ -91,11 +97,19 @@ async function transcribe() {
   }
 
   const file = fileInput.files[0];
+
+  // Validate file size on client
+  const fileSizeMB = file.size / (1024 * 1024);
+  if (fileSizeMB > MAX_FILE_SIZE_MB) {
+    showStatus(`El archivo es demasiado grande (${fileSizeMB.toFixed(1)}MB). Máximo: ${MAX_FILE_SIZE_MB}MB.`, "error");
+    return;
+  }
+
   const audioDuration = await getAudioDuration(file);
   const formData = new FormData();
   formData.append("file", file);
 
-  btn.disabled = true;
+  setTranscribing(true);
   resultBox.classList.add("hidden");
 
   const startTime = Date.now();
@@ -116,6 +130,7 @@ async function transcribe() {
 
     if (response.status === 401) {
       sessionStorage.removeItem("token");
+      showLoginStatus("Tu sesión ha expirado. Por favor, inicia sesión de nuevo.", "error");
       showLogin();
       return;
     }
@@ -162,7 +177,7 @@ async function transcribe() {
     showStatus("Error: " + err.message, "error");
   } finally {
     clearInterval(timer);
-    btn.disabled = false;
+    setTranscribing(false);
   }
 }
 

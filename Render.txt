@@ -1,2 +1,2 @@
 JWT_SECRET
-mi-secreto-seguro-2026
+(set via Render environment variables)

@@ -13,13 +13,15 @@
     <h1>Transcripcion de Audio</h1>
     <p class="subtitle">Introduce tus credenciales para acceder.</p>
     <div class="form-group">
-      <input type="text" id="username" placeholder="Usuario" />
+      <label for="username" class="sr-only">Usuario</label>
+      <input type="text" id="username" placeholder="Usuario" autocomplete="username" />
     </div>
     <div class="form-group">
-      <input type="password" id="password" placeholder="Contraseña" onkeydown="if(event.key==='Enter') doLogin()" />
+      <label for="password" class="sr-only">Contraseña</label>
+      <input type="password" id="password" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()" />
     </div>
     <button onclick="doLogin()">Entrar</button>
-    <div id="loginStatus" class="status hidden"></div>
+    <div id="loginStatus" class="status hidden" aria-live="polite"></div>
   </div>
 
   <!-- App -->
@@ -31,13 +33,14 @@
     <p class="subtitle">Sube un archivo de audio o video y obtén su transcripción.</p>
 
     <div class="upload-box">
+      <label for="audioFile" class="sr-only">Seleccionar archivo de audio o video</label>
       <input type="file" id="audioFile" accept="audio/*,video/*" style="display:none" onchange="updateFileName()" />
-      <button class="btn-secondary" onclick="document.getElementById('audioFile').click()">Seleccionar archivo</button>
+      <button id="selectFileBtn" class="btn-secondary" onclick="document.getElementById('audioFile').click()">Seleccionar archivo</button>
       <span id="fileName" class="file-name">Ningún archivo seleccionado</span>
       <button id="transcribeBtn" onclick="transcribe()">Transcribir</button>
     </div>
 
-    <div id="status" class="status hidden"></div>
+    <div id="status" class="status hidden" aria-live="polite"></div>
 
     <div id="resultBox" class="result-box hidden">
       <div id="infoBox" class="info-box">

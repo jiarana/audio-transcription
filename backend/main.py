@@ -1,11 +1,11 @@
 import os
 import math
 import json
+import logging
 import tempfile
 from datetime import datetime, timedelta, timezone
 
-os.environ["PATH"] += r";C:\Users\jiarana\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.0.1-full_build\bin"
-
+import bcrypt
 import jwt
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,53 +13,109 @@ from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
-from openai import OpenAI
+from openai import OpenAI, APIError, APITimeoutError
 from dotenv import load_dotenv
+from pydantic import BaseModel
 from pydub import AudioSegment
 
 load_dotenv()
+
+# --- Configuration ---
+
+logger = logging.getLogger("transcription")
+logging.basicConfig(level=logging.INFO)
+
+# FFmpeg path (optional, falls back to system PATH)
+ffmpeg_path = os.getenv("FFMPEG_PATH")
+if ffmpeg_path:
+    os.environ["PATH"] += os.pathsep + ffmpeg_path
+
+# JWT secret — required, no fallback
+JWT_SECRET = os.getenv("JWT_SECRET")
+if not JWT_SECRET:
+    raise RuntimeError("JWT_SECRET environment variable is required")
+
+# OpenAI API key — validate at startup
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    raise RuntimeError("OPENAI_API_KEY environment variable is required")
+
+client = OpenAI(api_key=OPENAI_API_KEY, timeout=120.0)
+
+# Users — loaded from env: USERS=admin:$2b$12$hash,user2:$2b$12$hash
+USERS: dict[str, str] = {}
+users_env = os.getenv("USERS", "")
+if users_env:
+    for entry in users_env.split(","):
+        entry = entry.strip()
+        if ":" not in entry:
+            continue
+        username, password_hash = entry.split(":", 1)
+        USERS[username.strip()] = password_hash.strip()
+
+if not USERS:
+    logger.warning("No users configured. Set USERS env var (format: user1:bcrypt_hash,user2:bcrypt_hash)")
+
+# CORS
+ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:8000,http://localhost:3000"
+).split(",")
+
+# File upload limits
+MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "100"))
+ALLOWED_EXTENSIONS = {
+    "mp3", "mp4", "mpeg", "mpga", "m4a", "wav", "webm", "ogg", "flac", "aac",
+    "wma", "amr", "opus", "mov", "avi", "mkv", "3gp",
+}
+
+CHUNK_MB = 24
+
+# --- App setup ---
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[origin.strip() for origin in ALLOWED_ORIGINS],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+security = HTTPBearer()
+
+
+# --- Models ---
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+# --- Routes ---
 
 @app.get("/")
 async def root():
     return RedirectResponse(url="/app")
 
 
-# Servir frontend
+# Serve frontend
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
 if os.path.exists(frontend_path):
     app.mount("/app", StaticFiles(directory=frontend_path, html=True), name="frontend")
-JWT_SECRET = os.getenv("JWT_SECRET", "cambiar-este-secreto-en-produccion")
-security = HTTPBearer()
-
-# --- Usuarios autorizados: { "usuario": "contraseña" } ---
-USERS = {
-    "admin": "admin123",
-}
-# ---------------------------------------------------------
-
-CHUNK_MB = 24
 
 
-# Auth
+# --- Auth ---
+
 @app.post("/login")
-async def login(data: dict):
-    username = data.get("username", "")
-    password = data.get("password", "")
-    if USERS.get(username) != password:
+async def login(data: LoginRequest):
+    stored_hash = USERS.get(data.username)
+    if not stored_hash or not bcrypt.checkpw(
+        data.password.encode("utf-8"), stored_hash.encode("utf-8")
+    ):
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
     token = jwt.encode(
-        {"sub": username, "exp": datetime.now(timezone.utc) + timedelta(hours=8)},
+        {"sub": data.username, "exp": datetime.now(timezone.utc) + timedelta(hours=8)},
         JWT_SECRET,
         algorithm="HS256",
     )
@@ -75,28 +131,39 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
         raise HTTPException(status_code=401, detail="Token inválido")
 
 
-# Utils
+# --- Utils ---
+
 def sse(data: dict) -> str:
     return f"data: {json.dumps(data)}\n\n"
 
 
-# Transcripción
+# --- Transcription ---
+
 @app.post("/transcribe")
 async def transcribe(file: UploadFile = File(...), _=Depends(verify_token)):
-    if not os.getenv("OPENAI_API_KEY"):
-        raise HTTPException(status_code=500, detail="API key no configurada en .env")
+    # Validate extension
+    ext = os.path.splitext(file.filename or "")[1].lower().lstrip(".") or "mp3"
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Formato no soportado. Formatos permitidos: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
+        )
 
+    # Read and validate size
     audio_bytes = await file.read()
-    ext = os.path.splitext(file.filename)[1].lower().lstrip(".") or "mp3"
+    max_bytes = MAX_FILE_SIZE_MB * 1024 * 1024
+    if len(audio_bytes) > max_bytes:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Archivo demasiado grande. Máximo: {MAX_FILE_SIZE_MB}MB",
+        )
 
     async def generate():
-        # Guardar archivo original en disco
         with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False) as tmp:
             tmp.write(audio_bytes)
             tmp_path = tmp.name
 
         try:
-            # Convertir siempre a MP3 con pydub (soluciona problemas de formato en móvil)
             audio = AudioSegment.from_file(tmp_path)
             duration_ms = len(audio)
 
@@ -108,7 +175,6 @@ async def transcribe(file: UploadFile = File(...), _=Depends(verify_token)):
                 mp3_bytes = f.read()
             os.unlink(mp3_path)
 
-            # Fragmentar si supera el límite
             chunk_bytes_limit = CHUNK_MB * 1024 * 1024
             if len(mp3_bytes) <= chunk_bytes_limit:
                 text = _transcribe_bytes(mp3_bytes, "audio.mp3", "audio/mpeg")
@@ -136,18 +202,23 @@ async def transcribe(file: UploadFile = File(...), _=Depends(verify_token)):
                         chunk_data = f.read()
                     text = _transcribe_bytes(chunk_data, f"chunk_{i}.mp3", "audio/mpeg")
                     transcriptions.append(text)
-                except HTTPException as e:
-                    yield sse({"error": e.detail})
+                except HTTPException:
+                    yield sse({"error": "Error al transcribir fragmento de audio"})
                     return
                 finally:
                     os.unlink(chunk_path)
 
             yield sse({"done": True, "text": " ".join(transcriptions)})
 
+        except (APIError, APITimeoutError) as e:
+            logger.error("OpenAI API error during transcription: %s", e)
+            yield sse({"error": "Error en el servicio de transcripción. Intenta de nuevo."})
         except Exception as e:
-            yield sse({"error": str(e)})
+            logger.error("Unexpected error during transcription: %s", e)
+            yield sse({"error": "Error inesperado al procesar el audio."})
         finally:
-            os.unlink(tmp_path)
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 
@@ -159,5 +230,9 @@ def _transcribe_bytes(data: bytes, filename: str, content_type: str) -> str:
             file=(filename, data, content_type),
         )
         return result.text
+    except (APIError, APITimeoutError) as e:
+        logger.error("OpenAI transcription error: %s", e)
+        raise HTTPException(status_code=502, detail="Error en el servicio de transcripción")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Unexpected transcription error: %s", e)
+        raise HTTPException(status_code=500, detail="Error al procesar la transcripción")
