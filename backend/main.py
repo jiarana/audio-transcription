@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from openai import OpenAI
 from dotenv import load_dotenv
 from pydub import AudioSegment
@@ -28,6 +29,11 @@ app.add_middleware(
 )
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/app")
+
 
 # Servir frontend
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
@@ -84,23 +90,33 @@ async def transcribe(file: UploadFile = File(...), _=Depends(verify_token)):
     ext = os.path.splitext(file.filename)[1].lower().lstrip(".") or "mp3"
 
     async def generate():
-        if len(audio_bytes) <= CHUNK_MB * 1024 * 1024:
-            try:
-                text = _transcribe_bytes(audio_bytes, file.filename, file.content_type)
-                yield sse({"done": True, "text": text})
-            except HTTPException as e:
-                yield sse({"error": e.detail})
-            return
-
+        # Guardar archivo original en disco
         with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False) as tmp:
             tmp.write(audio_bytes)
             tmp_path = tmp.name
 
         try:
+            # Convertir siempre a MP3 con pydub (soluciona problemas de formato en móvil)
             audio = AudioSegment.from_file(tmp_path)
             duration_ms = len(audio)
-            bytes_per_ms = len(audio_bytes) / duration_ms
-            chunk_ms = int((CHUNK_MB * 1024 * 1024) / bytes_per_ms)
+
+            with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as mp3_file:
+                audio.export(mp3_file.name, format="mp3")
+                mp3_path = mp3_file.name
+
+            with open(mp3_path, "rb") as f:
+                mp3_bytes = f.read()
+            os.unlink(mp3_path)
+
+            # Fragmentar si supera el límite
+            chunk_bytes_limit = CHUNK_MB * 1024 * 1024
+            if len(mp3_bytes) <= chunk_bytes_limit:
+                text = _transcribe_bytes(mp3_bytes, "audio.mp3", "audio/mpeg")
+                yield sse({"done": True, "text": text})
+                return
+
+            bytes_per_ms = len(mp3_bytes) / duration_ms
+            chunk_ms = int(chunk_bytes_limit / bytes_per_ms)
             num_chunks = math.ceil(duration_ms / chunk_ms)
 
             transcriptions = []
