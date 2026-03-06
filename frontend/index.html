@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Transcripcion de Audio</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Transcripcion de Audio</h1>
+    <p class="subtitle">Sube un archivo de audio o video y obtén su transcripción.</p>
+
+    <div class="upload-box">
+      <input type="file" id="audioFile" accept="audio/*,video/*" />
+      <button id="transcribeBtn" onclick="transcribe()">Transcribir</button>
+    </div>
+
+    <div id="status" class="status hidden"></div>
+
+    <div id="resultBox" class="result-box hidden">
+      <div id="infoBox" class="info-box">
+        <span id="infoFile"></span>
+        <span id="infoDuration"></span>
+        <span id="infoTime"></span>
+      </div>
+      <h2>Transcripcion:</h2>
+      <p id="resultText"></p>
+      <div class="result-actions">
+        <button onclick="saveText()">Guardar texto</button>
+        <button class="btn-secondary" onclick="resetApp()">Nueva transcripcion</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
