@@ -1,4 +1,6 @@
-const BACKEND_URL = "https://audio-transcription-gw7g.onrender.com";
+const BACKEND_URL = window.location.hostname === "localhost" || window.location.protocol === "file:"
+  ? "http://localhost:8000"
+  : "";
 
 // --- Sesión ---
 

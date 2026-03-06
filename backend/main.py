@@ -11,6 +11,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
 from openai import OpenAI
 from dotenv import load_dotenv
 from pydub import AudioSegment
@@ -27,6 +28,11 @@ app.add_middleware(
 )
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Servir frontend
+frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
+if os.path.exists(frontend_path):
+    app.mount("/app", StaticFiles(directory=frontend_path, html=True), name="frontend")
 JWT_SECRET = os.getenv("JWT_SECRET", "cambiar-este-secreto-en-produccion")
 security = HTTPBearer()
 
