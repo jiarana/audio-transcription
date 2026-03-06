@@ -1,4 +1,4 @@
-const BACKEND_URL = "http://localhost:8000/transcribe";
+const BACKEND_URL = "https://audio-transcription-gw7g.onrender.com/transcribe";
 
 async function transcribe() {
   const fileInput = document.getElementById("audioFile");
