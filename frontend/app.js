@@ -1,4 +1,74 @@
-const BACKEND_URL = "https://audio-transcription-gw7g.onrender.com/transcribe";
+const BACKEND_URL = "https://audio-transcription-gw7g.onrender.com";
+
+// --- Sesión ---
+
+function getToken() {
+  return sessionStorage.getItem("token");
+}
+
+function showApp() {
+  document.getElementById("loginBox").classList.add("hidden");
+  document.getElementById("appBox").classList.remove("hidden");
+}
+
+function showLogin() {
+  document.getElementById("appBox").classList.add("hidden");
+  document.getElementById("loginBox").classList.remove("hidden");
+}
+
+// Verificar si ya hay sesión activa al cargar
+window.addEventListener("load", () => {
+  if (getToken()) showApp();
+});
+
+// --- Login ---
+
+async function doLogin() {
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value;
+
+  if (!username || !password) {
+    showLoginStatus("Introduce usuario y contraseña.", "error");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${BACKEND_URL}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      showLoginStatus(data.detail || "Error al iniciar sesión.", "error");
+      return;
+    }
+
+    sessionStorage.setItem("token", data.token);
+    document.getElementById("username").value = "";
+    document.getElementById("password").value = "";
+    document.getElementById("loginStatus").classList.add("hidden");
+    showApp();
+  } catch {
+    showLoginStatus("No se pudo conectar con el servidor.", "error");
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem("token");
+  resetApp();
+  showLogin();
+}
+
+function showLoginStatus(message, type) {
+  const el = document.getElementById("loginStatus");
+  el.textContent = message;
+  el.className = "status " + type;
+}
+
+// --- Transcripción ---
 
 async function transcribe() {
   const fileInput = document.getElementById("audioFile");
@@ -8,15 +78,12 @@ async function transcribe() {
   const resultText = document.getElementById("resultText");
 
   if (!fileInput.files.length) {
-    showStatus("Por favor selecciona un archivo de audio.", "error");
+    showStatus("Por favor selecciona un archivo de audio o video.", "error");
     return;
   }
 
   const file = fileInput.files[0];
-
-  // Obtener duración del audio
   const audioDuration = await getAudioDuration(file);
-
   const formData = new FormData();
   formData.append("file", file);
 
@@ -33,10 +100,17 @@ async function transcribe() {
   showStatus("Transcribiendo... 0s", "loading");
 
   try {
-    const response = await fetch(BACKEND_URL, {
+    const response = await fetch(`${BACKEND_URL}/transcribe`, {
       method: "POST",
+      headers: { Authorization: `Bearer ${getToken()}` },
       body: formData,
     });
+
+    if (response.status === 401) {
+      sessionStorage.removeItem("token");
+      showLogin();
+      return;
+    }
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();

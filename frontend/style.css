@@ -34,6 +34,47 @@ h1 {
   margin-bottom: 28px;
 }
 
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #4a90e2;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.app-header h1 {
+  margin-bottom: 0;
+}
+
+.btn-logout {
+  padding: 6px 16px;
+  font-size: 0.85rem;
+  background: #fff;
+  color: #999;
+  border: 1px solid #ddd;
+}
+
+.btn-logout:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
 .upload-box {
   display: flex;
   gap: 12px;
