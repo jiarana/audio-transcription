@@ -28,7 +28,7 @@
   <div id="appBox" class="container hidden">
     <div class="app-header">
       <h1>Transcripción de Audio</h1>
-      <button class="btn-logout" onclick="logout()">Cerrar sesion</button>
+      <button class="btn-logout" onclick="logout()">Cerrar sesión</button>
     </div>
     <p class="subtitle">Sube un archivo de audio o video y obtén su transcripción.</p>
 
@@ -64,11 +64,12 @@
         <span id="infoDuration"></span>
         <span id="infoTime"></span>
       </div>
-      <h2>Transcripcion:</h2>
-      <p id="resultText"></p>
+      <h2>Transcripción:</h2>
+      <textarea id="resultText" rows="8" spellcheck="true"></textarea>
       <div class="result-actions">
-        <button onclick="saveText()">Guardar texto</button>
-        <button class="btn-secondary" onclick="resetApp()">Nueva transcripcion</button>
+        <button id="copyBtn" onclick="copyText()">Copiar</button>
+        <button onclick="saveText()">Guardar .txt</button>
+        <button class="btn-secondary" onclick="resetApp()">Nueva transcripción</button>
       </div>
     </div>
   </div>

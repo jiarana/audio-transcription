@@ -170,7 +170,7 @@ async function transcribe() {
           document.getElementById("infoTime").textContent = `Tiempo de transcripción: ${elapsed}s`;
 
           status.classList.add("hidden");
-          resultText.textContent = data.text;
+          resultText.value = data.text;
           resultBox.classList.remove("hidden");
         }
       }
@@ -183,8 +183,21 @@ async function transcribe() {
   }
 }
 
+function copyText() {
+  const text = document.getElementById("resultText").value;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById("copyBtn");
+    btn.textContent = "¡Copiado!";
+    btn.classList.add("btn-copied");
+    setTimeout(() => {
+      btn.textContent = "Copiar";
+      btn.classList.remove("btn-copied");
+    }, 2000);
+  });
+}
+
 function saveText() {
-  const text = document.getElementById("resultText").textContent;
+  const text = document.getElementById("resultText").value;
   const fileName = document.getElementById("infoFile").textContent.replace("Archivo: ", "");
   const saveName = fileName.replace(/\.[^.]+$/, "") + "_transcripcion.txt";
 
@@ -195,8 +208,6 @@ function saveText() {
   a.download = saveName;
   a.click();
   URL.revokeObjectURL(url);
-
-  resetApp();
 }
 
 function resetApp() {
@@ -205,7 +216,7 @@ function resetApp() {
   document.getElementById("langSelect").value = "";
   document.getElementById("resultBox").classList.add("hidden");
   document.getElementById("status").classList.add("hidden");
-  document.getElementById("resultText").textContent = "";
+  document.getElementById("resultText").value = "";
 }
 
 function getAudioDuration(file) {

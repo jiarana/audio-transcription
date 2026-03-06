@@ -179,9 +179,27 @@ button:disabled {
   margin-bottom: 10px;
 }
 
-.result-box p {
+.result-box textarea {
+  width: 100%;
   line-height: 1.6;
   font-size: 1rem;
+  font-family: inherit;
+  color: #333;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px;
+  resize: vertical;
+  min-height: 120px;
+}
+
+.result-box textarea:focus {
+  outline: none;
+  border-color: #4a90e2;
+}
+
+.btn-copied {
+  background: #27ae60 !important;
 }
 
 .result-actions {
