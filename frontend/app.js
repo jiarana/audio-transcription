@@ -70,6 +70,12 @@ function showLoginStatus(message, type) {
   el.className = "status " + type;
 }
 
+function updateFileName() {
+  const fileInput = document.getElementById("audioFile");
+  const label = document.getElementById("fileName");
+  label.textContent = fileInput.files.length ? fileInput.files[0].name : "Ningún archivo seleccionado";
+}
+
 // --- Transcripción ---
 
 async function transcribe() {
@@ -178,6 +184,7 @@ function saveText() {
 
 function resetApp() {
   document.getElementById("audioFile").value = "";
+  document.getElementById("fileName").textContent = "Ningún archivo seleccionado";
   document.getElementById("resultBox").classList.add("hidden");
   document.getElementById("status").classList.add("hidden");
   document.getElementById("resultText").textContent = "";
