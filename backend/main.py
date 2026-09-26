@@ -13,7 +13,7 @@ from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
-from openai import OpenAI, APIError, APITimeoutError
+from openai import OpenAI, APIError, APITimeoutError, RateLimitError
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from pydub import AudioSegment
@@ -206,14 +206,17 @@ async def transcribe(
                         chunk_data = f.read()
                     text = _transcribe_bytes(chunk_data, f"chunk_{i}.mp3", "audio/mpeg", language=language)
                     transcriptions.append(text)
-                except HTTPException:
-                    yield sse({"error": "Error al transcribir fragmento de audio"})
+                except HTTPException as e:
+                    yield sse({"error": f"Error en el fragmento {i + 1} de {num_chunks}: {e.detail}"})
                     return
                 finally:
                     os.unlink(chunk_path)
 
             yield sse({"done": True, "text": " ".join(transcriptions)})
 
+        except HTTPException as e:
+            # Already logged in _transcribe_bytes; forward its user-facing message
+            yield sse({"error": e.detail})
         except (APIError, APITimeoutError) as e:
             logger.error("OpenAI API error during transcription: %s", e)
             yield sse({"error": "Error en el servicio de transcripción. Intenta de nuevo."})
@@ -234,6 +237,18 @@ def _transcribe_bytes(data: bytes, filename: str, content_type: str, language: s
             params["language"] = language
         result = client.audio.transcriptions.create(**params)
         return result.text
+    except RateLimitError as e:
+        logger.error("OpenAI rate limit/quota error: %s", e)
+        # OpenAI uses 429 both for exhausted credit and for too many requests
+        if e.code in ("insufficient_quota", "credit_balance_exhausted"):
+            raise HTTPException(
+                status_code=503,
+                detail="El servicio de transcripción no tiene crédito disponible. Contacta con el administrador.",
+            )
+        raise HTTPException(
+            status_code=503,
+            detail="El servicio de transcripción está saturado. Espera un momento e inténtalo de nuevo.",
+        )
     except (APIError, APITimeoutError) as e:
         logger.error("OpenAI transcription error: %s", e)
         raise HTTPException(status_code=502, detail="Error en el servicio de transcripción")

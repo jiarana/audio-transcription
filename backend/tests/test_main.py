@@ -2,8 +2,10 @@ import io
 import json
 from unittest.mock import patch, MagicMock
 
+import httpx
 import jwt
 import pytest
+from openai import RateLimitError
 
 
 # --- Login tests ---
@@ -135,3 +137,40 @@ async def test_transcribe_success_sse(client, auth_token):
     last_event = events[-1]
     assert last_event.get("done") is True
     assert last_event.get("text") == "Hola mundo transcrito"
+
+
+# --- OpenAI error handling (mocked) ---
+
+def _rate_limit_error(code):
+    response = httpx.Response(429, request=httpx.Request("POST", "https://api.openai.com/v1/audio/transcriptions"))
+    return RateLimitError("Error code: 429", response=response, body={"code": code, "type": code})
+
+
+async def _post_and_get_events(client, auth_token, create_side_effect):
+    mock_audio = MagicMock()
+    mock_audio.__len__ = lambda self: 5000
+    mock_audio.export = MagicMock()
+
+    with patch("backend.main.AudioSegment.from_file", return_value=mock_audio), \
+         patch("backend.main.client.audio.transcriptions.create", side_effect=create_side_effect), \
+         patch("builtins.open", MagicMock(return_value=io.BytesIO(b"fake audio"))):
+        resp = await client.post(
+            "/transcribe",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            files={"file": ("test.mp3", b"fake mp3 content", "audio/mpeg")},
+        )
+
+    assert resp.status_code == 200
+    return [json.loads(line[6:]) for line in resp.text.strip().split("\n") if line.startswith("data: ")]
+
+
+@pytest.mark.anyio
+async def test_transcribe_no_credit_shows_clear_message(client, auth_token):
+    events = await _post_and_get_events(client, auth_token, _rate_limit_error("credit_balance_exhausted"))
+    assert "crédito" in events[-1]["error"]
+
+
+@pytest.mark.anyio
+async def test_transcribe_rate_limited_shows_retry_message(client, auth_token):
+    events = await _post_and_get_events(client, auth_token, _rate_limit_error("rate_limit_exceeded"))
+    assert "inténtalo de nuevo" in events[-1]["error"]
