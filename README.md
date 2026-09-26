@@ -42,6 +42,7 @@ audio-transcription/
 ├── backend/
 │   ├── main.py              # Servidor FastAPI (API + sirviente del frontend)
 │   ├── requirements.txt
+│   ├── .env.example         # Plantilla de variables de entorno
 │   └── tests/
 │       ├── conftest.py
 │       └── test_main.py     # 11 tests (pytest)
@@ -59,7 +60,7 @@ audio-transcription/
 
 ### Requisitos previos
 
-- Python 3.11+
+- Python 3.12
 - [FFmpeg](https://ffmpeg.org/download.html) instalado y disponible en `PATH`
 - Cuenta de OpenAI con acceso a la API
 
