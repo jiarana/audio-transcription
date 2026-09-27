@@ -45,7 +45,7 @@ audio-transcription/
 │   ├── .env.example         # Plantilla de variables de entorno
 │   └── tests/
 │       ├── conftest.py
-│       └── test_main.py     # 11 tests (pytest)
+│       └── test_main.py     # 13 tests (pytest)
 ├── frontend/
 │   ├── index.html
 │   ├── style.css
@@ -121,7 +121,7 @@ cd audio-transcription
 python -m pytest backend/tests/ -v
 ```
 
-11 tests cubren: login, verificación de token, validación de archivos y flujo SSE de transcripción.
+13 tests cubren: login, verificación de token, validación de archivos, flujo SSE de transcripción y mensajes de error de OpenAI (sin crédito o saturado).
 
 ---
 
